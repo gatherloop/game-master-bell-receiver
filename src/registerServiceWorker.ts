@@ -4,5 +4,6 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   const swUrl = `${import.meta.env.BASE_URL}sw.js`;
-  return navigator.serviceWorker.register(swUrl);
+  // type: "module" lets sw.js `import` ./notification.js directly (R3).
+  return navigator.serviceWorker.register(swUrl, { type: "module" });
 }

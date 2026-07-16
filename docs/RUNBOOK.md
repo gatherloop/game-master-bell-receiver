@@ -9,10 +9,20 @@ staff member taps "Berlangganan", grants notification permission, enters
 the staff passcode once, and the app subscribes via the Push API and
 registers that subscription with the call API. The status screen reflects
 subscription state (not subscribed / subscribed / permission denied) and
-offers an unsubscribe action. Push notification *display* and the
-recent-calls list land in R3 and R4 — a call currently reaches the device's
-browser-level PushSubscription but nothing renders a notification yet
-(`public/sw.js` is still install/activate only).
+offers an unsubscribe action.
+
+As of phase **R3**, `public/sw.js` handles incoming pushes end to end
+(FR-R2): its `push` listener parses the API's payload and calls
+`showNotification` with the table/floor text and a vibration pattern,
+whether the PWA is foreground, background, or fully closed; its
+`notificationclick` listener closes the notification and focuses an
+existing app window (or opens one) so tapping it brings the PWA to the
+front. The notification content is built by `public/notification.js`, a
+plain-JS module the service worker imports directly (it is registered with
+`{ type: "module" }` — see `src/registerServiceWorker.ts`) and that
+`tests/notification.test.js` also imports, so the payload-formatting logic
+is unit-tested (NFR-5) without needing a build step for the worker itself.
+The recent-calls list lands in R4.
 
 ## Environment variables
 
@@ -44,25 +54,38 @@ browsers, so the service worker registers fine in dev.
 ```sh
 pnpm lint          # eslint
 pnpm typecheck     # tsc --noEmit
+pnpm test          # vitest run
 pnpm format:check  # prettier --check
-pnpm build          # vite build -> dist/
+pnpm build         # vite build -> dist/
 ```
 
-All four run in CI (`.github/workflows/ci.yml`) on every push and pull
-request.
+These are intended to run in CI on every push and pull request, but no
+`.github/workflows/` exist in this repo yet (see Known gaps below) — run
+them locally before pushing.
 
 ## Deploying
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the
-app and publishes `dist/` to GitHub Pages
-(`https://gatherloop.github.io/game-master-bell-receiver/`). No manual step
-is required; confirm in the repo's **Settings → Pages** that the source is
-set to "GitHub Actions".
+The intended flow (per PRD-v2 R1) is: pushing to `main` triggers a GitHub
+Actions workflow that builds the app and publishes `dist/` to GitHub Pages
+(`https://gatherloop.github.io/game-master-bell-receiver/`), with the repo's
+**Settings → Pages** source set to "GitHub Actions". See **Known gaps**
+below — that workflow doesn't exist in this repo yet, so until it's added,
+build locally (`pnpm build`) and publish `dist/` manually (e.g. `gh-pages`,
+or the **Settings → Pages** "deploy from a branch" option pointed at a
+published `dist/`).
 
 To verify a deploy: open the Pages URL on a phone and confirm the browser
 offers "Add to Home Screen" / an install prompt (the manifest + icons +
 registered service worker are what make it installable — see
 `public/site.webmanifest`, `public/sw.js`).
+
+## Known gaps
+
+- **No `.github/workflows/`** — CI (lint/typecheck/test/format) and the
+  Pages deploy workflow described by phase **R1** were never actually
+  added to this repo (confirmed against `main` on GitHub: no `.github/`
+  directory exists). Run the **Checks** commands above locally before
+  pushing until these are added.
 
 ## Regenerating the icon set
 
@@ -89,3 +112,4 @@ regenerate all sizes, including the maskable variant.
 | Passcode form reappears every time | The passcode is only saved to `localStorage` *after* the API accepts it (a rejected passcode is never persisted) — a wrong passcode, or `VITE_API_URL` pointing at a dead/unreachable API, means it never gets past that point. Check the network tab for the `POST /subscriptions` response. |
 | "Gagal mengambil kunci VAPID" / subscribe never completes | `GET /vapid-key` failed or `VITE_API_URL` is misconfigured — confirm the API is up and CORS allows this origin (FR-A4). If subscribing fails partway through, the app unsubscribes the local `PushSubscription` again before showing the error, so it shouldn't get stuck "subscribed" locally with no matching API row. |
 | Status shows "Berlangganan" but the device never gets calls | The app treats *any* existing browser-level `PushSubscription` as "subscribed" on load — it doesn't re-verify the row still exists server-side. If the API pruned it (FR-A6, a dead subscription) or it was deleted out-of-band, the status screen won't notice until the user explicitly unsubscribes and re-subscribes. |
+| Subscribed device doesn't show a notification on a call | Confirm `reg.active.scriptURL` in devtools application panel shows `sw.js` loaded as a **module** worker (Chrome DevTools → Application → Service Workers); an old browser without module-worker support won't run `public/sw.js`'s `import`. Otherwise check the push payload the API actually sent — `event.data.json()` failing (non-JSON body) falls back to a generic "Panggilan Game Master" notification with no table/floor rather than throwing, so a wrong-looking notification usually means an API payload shape mismatch, not a receiver bug. |
