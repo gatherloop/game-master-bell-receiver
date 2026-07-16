@@ -1,0 +1,21 @@
+{
+  "name": "Game Master Bell — Receiver",
+  "short_name": "GM Bell Receiver",
+  "description": "Menerima notifikasi panggilan game master di Gatherloop Board Game Cafe.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#fffaf0",
+  "theme_color": "#f5b942",
+  "lang": "id",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
