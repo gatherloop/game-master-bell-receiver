@@ -8,8 +8,10 @@ for the full product/architecture spec and implementation phases (this repo
 covers the **R** phase track), and `docs/RUNBOOK.md` in this repo for
 deploy/dev instructions.
 
-**Status:** R1 (PWA scaffold & deploy). No subscribe flow or push handling
-yet — those land in R2–R4.
+**Status:** R2 (subscribe flow). Notification permission → staff passcode →
+push subscription, registered with the call API; status screen and
+unsubscribe action. Push notification display and the recent-calls list
+land in R3–R4.
 
 ## Stack
 

@@ -80,3 +80,76 @@ h1 {
   margin: 0;
   font-weight: 600;
 }
+
+.status-error {
+  margin: 0.75rem 0 0;
+  color: var(--color-error);
+  font-size: 0.85rem;
+}
+
+.btn {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--color-text);
+}
+
+.btn-primary:hover {
+  background: var(--color-accent-dark);
+}
+
+.btn-secondary {
+  background: #fff;
+  color: var(--color-error);
+  border: 1px solid var(--color-error);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.passcode-form {
+  width: 100%;
+  max-width: 24rem;
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #fff;
+  border: 1px solid #eee0c4;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: left;
+}
+
+.passcode-form label {
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.passcode-form input {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #eee0c4;
+  font-size: 1rem;
+}
+
+.passcode-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.passcode-actions .btn {
+  margin-top: 0;
+}

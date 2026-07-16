@@ -4,12 +4,24 @@ Operational reference for this repo. See
 [`gatherloop/game-master-bell`'s `docs/PRD-v2.md`](https://github.com/gatherloop/game-master-bell/blob/main/docs/PRD-v2.md)
 for the current architecture and the **R** (receiver) implementation phases.
 
-As of phase **R1**, this repo is an installable PWA shell only: a status
-screen placeholder and a no-op service worker (install/activate only). There
-is no subscribe flow, push handling, or recent-calls list yet — those land
-in R2, R3, and R4 respectively, and this doc will grow alongside them
-(staff passcode entry, VAPID key troubleshooting, notification permission
-issues).
+As of phase **R2**, the app has a working subscribe flow (FR-R1, FR-R4): a
+staff member taps "Berlangganan", grants notification permission, enters
+the staff passcode once, and the app subscribes via the Push API and
+registers that subscription with the call API. The status screen reflects
+subscription state (not subscribed / subscribed / permission denied) and
+offers an unsubscribe action. Push notification *display* and the
+recent-calls list land in R3 and R4 — a call currently reaches the device's
+browser-level PushSubscription but nothing renders a notification yet
+(`public/sw.js` is still install/activate only).
+
+## Environment variables
+
+| Variable | Purpose |
+|---|---|
+| `VITE_API_URL` | Base URL of the call API (no trailing slash), e.g. `https://bell-api.gatherloop.id`. Used for `GET /vapid-key`, `POST /subscriptions`, `DELETE /subscriptions`. See `.env.example`. |
+
+Copy `.env.example` to `.env.local` (gitignored) to point at a local or
+staging API; `.env.development` provides the `pnpm dev` default.
 
 ## Prerequisites
 
@@ -73,3 +85,7 @@ regenerate all sizes, including the maskable variant.
 |---|---|
 | App doesn't offer "Add to Home Screen" | Not served over HTTPS (or `localhost`), manifest/icon 404, or the service worker failed to register — check the browser's application/manifest devtools panel. |
 | Deploy workflow fails on `pnpm build` | Run `pnpm build` locally first; the workflow uses the same `--frozen-lockfile` install, so a stale `pnpm-lock.yaml` will fail there too. |
+| Status stuck on "Izin notifikasi ditolak" | Browser-level notification permission was denied for this origin. It can't be re-prompted from the page — the user has to clear it in the browser's site settings, then reload. |
+| Passcode form reappears every time | The passcode is only saved to `localStorage` *after* the API accepts it (a rejected passcode is never persisted) — a wrong passcode, or `VITE_API_URL` pointing at a dead/unreachable API, means it never gets past that point. Check the network tab for the `POST /subscriptions` response. |
+| "Gagal mengambil kunci VAPID" / subscribe never completes | `GET /vapid-key` failed or `VITE_API_URL` is misconfigured — confirm the API is up and CORS allows this origin (FR-A4). If subscribing fails partway through, the app unsubscribes the local `PushSubscription` again before showing the error, so it shouldn't get stuck "subscribed" locally with no matching API row. |
+| Status shows "Berlangganan" but the device never gets calls | The app treats *any* existing browser-level `PushSubscription` as "subscribed" on load — it doesn't re-verify the row still exists server-side. If the API pruned it (FR-A6, a dead subscription) or it was deleted out-of-band, the status screen won't notice until the user explicitly unsubscribes and re-subscribes. |
