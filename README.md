@@ -8,11 +8,13 @@ for the full product/architecture spec and implementation phases (this repo
 covers the **R** phase track), and `docs/RUNBOOK.md` in this repo for
 deploy/dev instructions.
 
-**Status:** R3 (notification handling). Notification permission → staff
+**Status:** R4 (recent-calls list). Notification permission → staff
 passcode → push subscription, registered with the call API; status screen
-and unsubscribe action (R2). Incoming pushes now show a notification with
+and unsubscribe action (R2). Incoming pushes show a notification with
 table/floor, vibration, and a tap-to-focus action, whether the PWA is
-foreground, background, or closed (R3). The recent-calls list lands in R4.
+foreground, background, or closed (R3). Every received call is now also
+persisted to IndexedDB and rendered as a recent-calls list on the status
+screen, updating live while the app is open (R4).
 
 ## Stack
 

@@ -22,7 +22,23 @@ plain-JS module the service worker imports directly (it is registered with
 `{ type: "module" }` — see `src/registerServiceWorker.ts`) and that
 `tests/notification.test.js` also imports, so the payload-formatting logic
 is unit-tested (NFR-5) without needing a build step for the worker itself.
-The recent-calls list lands in R4.
+
+As of phase **R4**, every push also persists a record (table, floor,
+number, calledAt, receivedAt) to an IndexedDB database (`gm-bell-receiver`,
+store `calls`) via `public/recent-calls.js` — the same plain-JS-module
+pattern as `notification.js`, since the service worker can only `import`
+unbundled JS. It keeps only the most recent 50 calls, pruning older ones
+after each write. The status screen (`src/app.ts`, backed by
+`src/lib/recentCalls.ts`) reads that same IndexedDB database to render a
+"Panggilan Terbaru" list, newest first, and refreshes live while the app
+stays open: `public/recent-calls.js` posts each new record on a
+`BroadcastChannel` (`gm-bell-recent-calls`), which `src/lib/recentCalls.ts`
+subscribes to. `DB_NAME`/`DB_VERSION`/`STORE_NAME`/the channel name are
+duplicated (not imported) between the two modules — one is unbundled plain
+JS loaded directly by the browser, the other is bundled TypeScript — so a
+schema change needs updating both; `tests/recentCalls.test.js` seeds data
+through the service worker's module and reads it back through the app's
+module to guard against them drifting apart.
 
 ## Environment variables
 
@@ -113,3 +129,4 @@ regenerate all sizes, including the maskable variant.
 | "Gagal mengambil kunci VAPID" / subscribe never completes | `GET /vapid-key` failed or `VITE_API_URL` is misconfigured — confirm the API is up and CORS allows this origin (FR-A4). If subscribing fails partway through, the app unsubscribes the local `PushSubscription` again before showing the error, so it shouldn't get stuck "subscribed" locally with no matching API row. |
 | Status shows "Berlangganan" but the device never gets calls | The app treats *any* existing browser-level `PushSubscription` as "subscribed" on load — it doesn't re-verify the row still exists server-side. If the API pruned it (FR-A6, a dead subscription) or it was deleted out-of-band, the status screen won't notice until the user explicitly unsubscribes and re-subscribes. |
 | Subscribed device doesn't show a notification on a call | Confirm `reg.active.scriptURL` in devtools application panel shows `sw.js` loaded as a **module** worker (Chrome DevTools → Application → Service Workers); an old browser without module-worker support won't run `public/sw.js`'s `import`. Otherwise check the push payload the API actually sent — `event.data.json()` failing (non-JSON body) falls back to a generic "Panggilan Game Master" notification with no table/floor rather than throwing, so a wrong-looking notification usually means an API payload shape mismatch, not a receiver bug. |
+| Notification arrives but "Panggilan Terbaru" doesn't show it | Check the Application → IndexedDB devtools panel for a `gm-bell-receiver` database with a `calls` store — if it's missing or empty despite notifications arriving, `public/recent-calls.js`'s `addRecentCall` is failing silently inside `event.waitUntil` (check the service worker's console, e.g. private/incognito windows in some browsers restrict IndexedDB). If the row is there but the open app doesn't update without a manual reload, the live-update path (`BroadcastChannel("gm-bell-recent-calls")`) isn't delivering — it's best-effort only; a reload always re-reads IndexedDB directly. |

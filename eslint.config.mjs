@@ -30,4 +30,13 @@ export default tseslint.config(
       },
     },
   },
+  {
+    files: ["public/*.js", "tests/**/*.js"],
+    languageOptions: {
+      globals: {
+        indexedDB: "readonly",
+        BroadcastChannel: "readonly",
+      },
+    },
+  },
 );

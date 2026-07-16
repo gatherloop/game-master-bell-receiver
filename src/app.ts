@@ -1,6 +1,7 @@
 import { ApiError, deleteSubscription, fetchVapidPublicKey, registerSubscription } from "./lib/api";
 import { getExistingSubscription, isPushSupported, subscribeToPush } from "./lib/push";
 import { clearStoredPasscode, getStoredPasscode, setStoredPasscode } from "./lib/passcode";
+import { getRecentCalls, subscribeToRecentCalls, type RecentCall } from "./lib/recentCalls";
 
 type Status =
   | "checking"
@@ -16,6 +17,8 @@ interface State {
   error: string | null;
   /** Which action to resume once the passcode form (shown when non-null) is submitted. */
   passcodePromptFor: "subscribe" | "unsubscribe" | null;
+  /** FR-R3: calls received on this device, newest first. */
+  recentCalls: RecentCall[];
 }
 
 const STATUS_LABELS: Record<Status, string> = {
@@ -36,11 +39,16 @@ export async function startApp(
     throw new Error("App element not found");
   }
 
-  renderScreen(app, { status: "checking", error: null, passcodePromptFor: null });
+  renderScreen(app, { status: "checking", error: null, passcodePromptFor: null, recentCalls: [] });
 
   const registration = await registrationPromise;
   if (!registration || !isPushSupported()) {
-    renderScreen(app, { status: "unsupported", error: null, passcodePromptFor: null });
+    renderScreen(app, {
+      status: "unsupported",
+      error: null,
+      passcodePromptFor: null,
+      recentCalls: [],
+    });
     return;
   }
 
@@ -51,7 +59,7 @@ export async function startApp(
 }
 
 function runApp(app: HTMLElement, registration: ServiceWorkerRegistration): void {
-  let state: State = { status: "checking", error: null, passcodePromptFor: null };
+  let state: State = { status: "checking", error: null, passcodePromptFor: null, recentCalls: [] };
 
   function setState(patch: Partial<State>): void {
     state = { ...state, ...patch };
@@ -179,6 +187,14 @@ function runApp(app: HTMLElement, registration: ServiceWorkerRegistration): void
     const existing = await getExistingSubscription(registration);
     setState({ status: existing ? "subscribed" : "not-subscribed" });
   })();
+
+  // FR-R3: load calls the service worker already stored, then keep the list
+  // live while this page stays open (the service worker broadcasts each new
+  // call as it stores it).
+  void getRecentCalls().then((recentCalls) => setState({ recentCalls }));
+  subscribeToRecentCalls((call) => {
+    setState({ recentCalls: [call, ...state.recentCalls] });
+  });
 }
 
 function renderScreen(app: HTMLElement, state: State): void {
@@ -228,6 +244,52 @@ function renderScreen(app: HTMLElement, state: State): void {
         ${actionHtml}
       </div>
       ${passcodeHtml}
+      ${renderRecentCalls(state.recentCalls)}
     </main>
   `;
+}
+
+function renderRecentCalls(recentCalls: RecentCall[]): string {
+  const listOrEmptyHtml = recentCalls.length
+    ? `<ul class="recent-calls-list">${recentCalls
+        .map(
+          (call) => `
+            <li class="recent-call">
+              <span class="recent-call-table">Meja ${escapeHtml(call.number ?? "?")} · Lantai ${escapeHtml(call.floor ?? "?")}</span>
+              <span class="recent-call-time">${escapeHtml(formatCallTime(call))}</span>
+            </li>
+          `,
+        )
+        .join("")}</ul>`
+    : `<p class="recent-calls-empty">Belum ada panggilan.</p>`;
+
+  return `
+    <section class="recent-calls">
+      <p class="status-label">Panggilan Terbaru</p>
+      ${listOrEmptyHtml}
+    </section>
+  `;
+}
+
+/** Formats a call's timestamp for display, preferring when it was made over when this device received it. */
+function formatCallTime(call: RecentCall): string {
+  const iso = call.calledAt ?? call.receivedAt;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
