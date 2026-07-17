@@ -217,7 +217,6 @@ function renderScreen(app: HTMLElement, state: State): void {
           id="passcode-input"
           name="passcode"
           type="password"
-          inputmode="numeric"
           autocomplete="off"
           required
           autofocus
