@@ -23,6 +23,24 @@ plain-JS module the service worker imports directly (it is registered with
 `tests/notification.test.js` also imports, so the payload-formatting logic
 is unit-tested (NFR-5) without needing a build step for the worker itself.
 
+Since web push has no standard way to set a custom *system* notification
+sound (browsers dropped the spec's `sound` option; on Android the OS/browser
+default always plays), `buildCallNotification` instead leans on the levers
+that *are* available: an uneven, deliberately non-uniform `vibrate` pattern
+so a call is felt as distinct from other apps' notifications; a
+🔔-prefixed title for quick visual recognition in a crowded notification
+shade; `requireInteraction: true` so it doesn't auto-dismiss; and
+`renotify: true` (only possible when `calledAt` gives a `tag` — the spec
+requires one) so a second call re-alerts instead of silently replacing an
+unread one. `src/lib/callSound.ts` adds one more option on top: a
+synthesized chime played via the Web Audio API whenever a call arrives
+*while the app tab is open* (wired up in `src/app.ts`'s
+`subscribeToRecentCalls` callback below) — the one case where the page's
+own JS runs instead of the OS handling the notification silently. Browsers
+require a user gesture before audio will play, so `primeCallSound()` is
+called from the subscribe button's click handler to unlock the
+`AudioContext` ahead of time.
+
 As of phase **R4**, every push also persists a record (table, floor,
 number, calledAt, receivedAt) to an IndexedDB database (`gm-bell-receiver`,
 store `calls`) via `public/recent-calls.js` — the same plain-JS-module

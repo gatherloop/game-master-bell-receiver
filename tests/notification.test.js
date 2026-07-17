@@ -9,10 +9,17 @@ describe("buildCallNotification", () => {
       data: { tableCode: "2-05", floor: "2", number: "5", calledAt: "2026-07-16T10:00:00.000Z" },
     });
 
-    expect(title).toBe("Panggilan Game Master");
+    expect(title).toBe("🔔 Panggilan Game Master");
     expect(options.body).toBe("Meja 5 · Lantai 2 memanggil game master");
     expect(options.data.tableCode).toBe("2-05");
     expect(options.tag).toBe("call-2026-07-16T10:00:00.000Z");
+    expect(options.renotify).toBe(true);
+  });
+
+  it("doesn't double up the bell emoji if the API already sent one", () => {
+    const { title } = buildCallNotification({ title: "🔔 Meja 5 Memanggil" });
+
+    expect(title).toBe("🔔 Meja 5 Memanggil");
   });
 
   it("falls back to a constructed title/body when the payload omits them", () => {
@@ -20,17 +27,19 @@ describe("buildCallNotification", () => {
       data: { tableCode: "1-03", floor: "1", number: "3" },
     });
 
-    expect(title).toBe("Panggilan Game Master");
+    expect(title).toBe("🔔 Panggilan Game Master");
     expect(options.body).toBe("Meja 3 · Lantai 1 memanggil game master");
     expect(options.tag).toBeUndefined();
+    expect(options.renotify).toBe(false);
   });
 
   it("handles a missing/empty push payload without throwing", () => {
     const { title, options } = buildCallNotification(undefined);
 
-    expect(title).toBe("Panggilan Game Master");
+    expect(title).toBe("🔔 Panggilan Game Master");
     expect(options.body).toContain("Meja ?");
     expect(options.data).toEqual({});
+    expect(options.renotify).toBe(false);
   });
 
   it("gives distinct calls distinct tags so notifications stack", () => {

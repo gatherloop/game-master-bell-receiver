@@ -2,6 +2,7 @@ import { ApiError, deleteSubscription, fetchVapidPublicKey, registerSubscription
 import { getExistingSubscription, isPushSupported, subscribeToPush } from "./lib/push";
 import { clearStoredPasscode, getStoredPasscode, setStoredPasscode } from "./lib/passcode";
 import { getRecentCalls, subscribeToRecentCalls, type RecentCall } from "./lib/recentCalls";
+import { playCallSound, primeCallSound } from "./lib/callSound";
 
 type Status =
   | "checking"
@@ -89,6 +90,11 @@ function runApp(app: HTMLElement, registration: ServiceWorkerRegistration): void
 
   async function handleSubscribeClick(): Promise<void> {
     setState({ error: null });
+    // A click handler is a user gesture, which browsers require before an
+    // AudioContext will actually produce sound — priming it here means the
+    // later push-triggered playCallSound() call (which has no gesture of
+    // its own) can play without being silently blocked.
+    primeCallSound();
 
     if (Notification.permission === "denied") {
       setState({ status: "permission-denied" });
@@ -194,6 +200,7 @@ function runApp(app: HTMLElement, registration: ServiceWorkerRegistration): void
   void getRecentCalls().then((recentCalls) => setState({ recentCalls }));
   subscribeToRecentCalls((call) => {
     setState({ recentCalls: [call, ...state.recentCalls] });
+    playCallSound();
   });
 }
 
