@@ -81,14 +81,26 @@ them locally before pushing.
 
 ## Deploying
 
-The intended flow (per PRD-v2 R1) is: pushing to `main` triggers a GitHub
-Actions workflow that builds the app and publishes `dist/` to GitHub Pages
-(`https://gatherloop.github.io/game-master-bell-receiver/`), with the repo's
-**Settings → Pages** source set to "GitHub Actions". See **Known gaps**
-below — that workflow doesn't exist in this repo yet, so until it's added,
-build locally (`pnpm build`) and publish `dist/` manually (e.g. `gh-pages`,
-or the **Settings → Pages** "deploy from a branch" option pointed at a
-published `dist/`).
+Pushing to `main` (or running the workflow manually) triggers
+`.github/workflows/deploy.yml`: it builds the app with `pnpm build` and
+publishes `dist/` to GitHub Pages
+(`https://gatherloop.github.io/game-master-bell-receiver/`) via
+`actions/upload-pages-artifact` + `actions/deploy-pages`.
+
+Two one-time repo settings are required for this to work:
+
+- **Settings → Pages → Source**: set to "GitHub Actions" (not "Deploy from
+  a branch").
+- **Settings → Secrets and variables → Actions → Secrets**: add a
+  `VITE_API_URL` secret with the production call API URL (e.g.
+  `https://bell-api.gatherloop.id`). The workflow passes it as a build-time
+  env var to `pnpm build`, same as `.env.local` does locally — Vite only
+  inlines `VITE_`-prefixed vars at build time, so this must be set before
+  the `pnpm build` step, not read at runtime. `vite build` runs in
+  `production` mode, which does not load `.env.development` (that file is
+  dev-server-only), so an unset secret means `VITE_API_URL` is `undefined`
+  in the deployed bundle and every API call breaks — always confirm the
+  secret is set after first enabling this workflow.
 
 To verify a deploy: open the Pages URL on a phone and confirm the browser
 offers "Add to Home Screen" / an install prompt (the manifest + icons +
@@ -97,11 +109,10 @@ registered service worker are what make it installable — see
 
 ## Known gaps
 
-- **No `.github/workflows/`** — CI (lint/typecheck/test/format) and the
-  Pages deploy workflow described by phase **R1** were never actually
-  added to this repo (confirmed against `main` on GitHub: no `.github/`
-  directory exists). Run the **Checks** commands above locally before
-  pushing until these are added.
+- **No CI workflow** — the Pages deploy workflow (`.github/workflows/deploy.yml`)
+  now exists, but a separate CI workflow running the **Checks** above
+  (lint/typecheck/test/format) on every push and pull request has not been
+  added yet. Run those commands locally before pushing until it is.
 
 ## Regenerating the icon set
 
