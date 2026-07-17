@@ -11,7 +11,10 @@
  */
 export function buildCallNotification(payload) {
   const data = (payload && payload.data) || {};
-  const title = (payload && payload.title) || "Panggilan Game Master";
+  const rawTitle = (payload && payload.title) || "Panggilan Game Master";
+  // 🔔-prefixed so it reads as urgent at a glance in a crowded notification
+  // shade, without depending on a sound the OS won't let us customize.
+  const title = rawTitle.startsWith("🔔") ? rawTitle : `🔔 ${rawTitle}`;
   const body =
     (payload && payload.body) ||
     `Meja ${data.number ?? "?"} · Lantai ${data.floor ?? "?"} memanggil game master`;
@@ -26,8 +29,17 @@ export function buildCallNotification(payload) {
       tag: data.calledAt ? `call-${data.calledAt}` : undefined,
       icon: "icon-192.png",
       badge: "icon-192.png",
-      vibrate: [200, 100, 200, 100, 200],
+      // Short-short-short-long: deliberately uneven so it's felt as
+      // distinct from the uniform buzz-buzz-buzz pattern most chat/social
+      // apps use, since the OS notification sound itself can't be changed.
+      vibrate: [80, 60, 80, 60, 80, 300, 500],
       requireInteraction: true,
+      // Without this, a retried delivery sharing an existing tag (see
+      // above) would silently replace the notification with no new alert
+      // at all — renotify makes it re-vibrate even if one is still
+      // showing. Spec requires a tag whenever renotify is true (browsers
+      // throw otherwise), so this only applies when calledAt gave us one.
+      renotify: Boolean(data.calledAt),
     },
   };
 }
