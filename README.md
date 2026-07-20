@@ -1,5 +1,16 @@
 # game-master-bell-receiver
 
+> **⚠️ Archived — read-only.** The receiver PWA described in this repo has
+> been retired in favor of the native Android app at
+> [`apps/receiver-android` in `gatherloop/game-master-bell`](https://github.com/gatherloop/game-master-bell/tree/main/apps/receiver-android),
+> per [PRD-v3](https://github.com/gatherloop/game-master-bell/blob/main/docs/PRD-v3.md).
+> Every staff phone now runs the native app, the API's Web Push path was
+> removed in PRD-v3 phase 9, and this repo's `.github/workflows/deploy.yml`
+> has been removed — the GitHub Pages site it published is being taken
+> down. Everything below describes this repo as it stood before retirement
+> — kept for history, not for active use. File issues and PRs against the
+> monorepo instead.
+
 Receiver PWA for Game Master Bell — installed on game master phones at
 Gatherloop Board Game Cafe to receive bell calls from customer tables.
 
